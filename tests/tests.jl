@@ -88,8 +88,9 @@ function plotSingleInstance(oracle::Oracle, x0::Vector{Float64}, minVal::Float64
         push!(errors, out[1]/(0.5*smoothness(q)*norm(x0-xStar,2)^2))
         push!(guarantees, out[2])
     end
-    plot1 = plot(errors, labels=permutedims([methodTitle(method) * " scaled error" for method in methods]), lc=[:blue :red :green :orange :purple], yscale=:log10,  linewidth=3, title = title)
-    plot!(guarantees, labels=permutedims([methodTitle(method) * " guarantee" for method in methods]), lc=[:blue :red :green :orange :purple])
+    colors = [palette(:tab10, 6)[1] palette(:tab10, 6)[2] palette(:tab10, 6)[3] palette(:tab10, 6)[4] palette(:tab10, 6)[5] palette(:tab10, 6)[6]]
+    plot1 = plot(errors, labels=permutedims([methodTitle(method) * " scaled error" for method in methods]), lc=colors, yscale=:log10,  linewidth=3, title = title)
+    plot!(guarantees, labels=permutedims([methodTitle(method) * " guarantee" for method in methods]), lc=colors)
     return plot1
 end
 
@@ -100,15 +101,18 @@ function plotSingleInstance(file_path::String, methods, steps=100)
     guarantees =[]
     for method in methods
         out = test(method, q, x0, steps, minVal)
-        push!(errors, out[1]/(0.5*smoothness(q)*norm(x0-xStar,2)^2))
+        push!(errors, max.(out[1]/(0.5*smoothness(q)*norm(x0-xStar,2)^2), 1e-16))
         push!(guarantees, out[2])
     end
-    plot1 = plot(errors, labels=permutedims([methodTitle(method) * " scaled error" for method in methods]), lc=[:blue :red :green :orange :purple], yscale=:log10,  linewidth=3, title = title)
-    plot!(guarantees, labels=permutedims([methodTitle(method) * " guarantee" for method in methods]), lc=[:blue :red :green :orange :purple])
+    colors = [palette(:tab10, 6)[1] palette(:tab10, 6)[2] palette(:tab10, 6)[3] palette(:tab10, 6)[4] palette(:tab10, 6)[5] palette(:tab10, 6)[6]]
+    plot1 = plot(errors, labels=permutedims([methodTitle(method) for method in methods]), lc=colors, yscale=:log10,  linewidth=3, title = title, legend=:outertopright, xlabel="Iterations", ylabel="Scaled Objective Gap")
+    plot!(guarantees, labels=permutedims([methodTitle(method) * " bound" for method in methods]), lc=colors, linewidth=2, linestyle=:dash)
     return plot1
 end
 
 function runSuiteOfTest(directory, methods, targetRelAccuracies=[1e-1,1e-3,1e-5], maxSteps=100)
+    
+    numberSolved = zeros(length(methods), length(targetRelAccuracies), maxSteps)
     for file in readdir(directory)
         file_path = joinpath(directory, file)
 
@@ -123,6 +127,7 @@ function runSuiteOfTest(directory, methods, targetRelAccuracies=[1e-1,1e-3,1e-5]
             for target in targetRelAccuracies
                 @printf("%-10.7f  ", target)
             end
+            m = 1
             for method in methods
                 println("")
                 println(methodTitle(method))
@@ -133,6 +138,9 @@ function runSuiteOfTest(directory, methods, targetRelAccuracies=[1e-1,1e-3,1e-5]
                 for j in 1:length(errors)
                     if errors[j]/(0.5*smoothness(q)*norm(x0-xStar,2)^2) < targetRelAccuracies[i]
                         @printf("%-12d", j)
+                        for k in j:maxSteps
+                            numberSolved[m, i, k] += 1 #mark we solved a problem to ith accuracy at iteration j
+                        end
                         i=i+1
                     end
                     if i > length(targetRelAccuracies)
@@ -160,10 +168,11 @@ function runSuiteOfTest(directory, methods, targetRelAccuracies=[1e-1,1e-3,1e-5]
                     print("--          ")
                     i = i+1
                 end
-                
+                m = m+1 #Update counter for which method number we are on
             end
             println("")
             println("")    
         end
     end
+    return numberSolved
 end

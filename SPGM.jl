@@ -172,5 +172,5 @@ function guarantee(method::SPGM)
 end
 
 function methodTitle(method::SPGM)
-    return "spgm-" * string(method.memory_size)
+    return "SPGM-" * string(method.memory_size)
 end
