@@ -94,13 +94,13 @@ function update(method::SPGM, value::Float64, gradient::Vector{Float64};
 
     # compute update
     mu, lambdas = optimize_lambdas(taus, Z, G, h, q, v, method.vmin)
+
     phi = dot(taus, mu) + sum(lambdas)
     if  !ismissing(max_steps) && method.iteration == max_steps
         psi = (1+sqrt(1+4*phi))/2
     else
         psi = 1 + sqrt(1 + 2 * phi)
     end
-
     # updates that don't depend on g_{n+1}
     method.psi_prev = psi
     method.zprime = Z * mu - G * lambdas
@@ -134,8 +134,7 @@ function clean_solution(mu, lambdas, taus, s)
     s = max(0, s)
     lambdas = s * lambdas
     mu = s * mu
-
-    if dot(taus, mu) + sum(lambdas) < taus[end]
+    if isnan(dot(taus, mu) + sum(lambdas)) || dot(taus, mu) + sum(lambdas) < taus[end]
         # println("Falling back to OTF(1).")
         i = length(mu)
         mu .= 0

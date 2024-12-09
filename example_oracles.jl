@@ -28,15 +28,23 @@ struct logisticRegression <: Oracle
 end
 
 function (q::logisticRegression)(x::Vector{Float64})
-    return sum(log.(1 .+ exp.(-q.y .* x))) / length(q.y)
+    ret = 0
+    for i in 1:length(q.y)
+        ret += max(0,q.y[i]*x[i]) + log(exp(-1*max(0,q.y[i]*x[i]))+exp(q.y[i]*x[i] - max(0,q.y[i]*x[i])))
+    end
+    return ret / length(q.y)
 end
 
 function gradient(q::logisticRegression, x::Vector{Float64})
-    return (-q.y ./ (1 .+ exp.(q.y .* x)))/length(q.y)
+    ret = zeros(length(x))
+    for i in 1:length(q.y)
+        ret[i] += q.y[i] / (1 + exp(-1*q.y[i] * x[i]))
+    end
+    return ret/length(q.y)
 end
 
 function smoothness(q::logisticRegression)
-    return 1
+    return 0.25
 end
 
 # LogSumExp function
